@@ -46,6 +46,8 @@ class Main : public CecCallback {
 		void stop();
 
 		void listDevices();
+		bool loadCECFromXML(std::string configFile);
+		static bool isRunning(const char* name);
 
 		void setMakeActive(bool active) {this->makeActive = active;};
 };
