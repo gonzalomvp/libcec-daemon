@@ -114,7 +114,7 @@ ICECAdapter * Cec::CecInit(const char * name, CecCallback * callback) {
 
 	config.Clear();
 
-	config.deviceTypes.Add(CEC_DEVICE_TYPE_PLAYBACK_DEVICE);
+	config.deviceTypes.Add(CEC_DEVICE_TYPE_RECORDING_DEVICE);
 	strncpy(config.strDeviceName, name, sizeof(config.strDeviceName));
 
 	callbacks.CBCecLogMessage           = &::cecLogMessage;
