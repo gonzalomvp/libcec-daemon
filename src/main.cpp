@@ -485,6 +485,8 @@ bool Main::loadCECFromXML(string configFile)
 	key2cec["start"] = CEC_USER_CONTROL_CODE_SETUP_MENU;
 	key2cec["select"] = CEC_USER_CONTROL_CODE_F4_YELLOW;
 	key2cec["exit"] = CEC_USER_CONTROL_CODE_CLEAR;
+	key2cec["x"] = -1;
+	key2cec["y"] = -1;
 	
 	cec2sdl[key2cec["a"]]=sdl2input[SDLK_RETURN];
 	cec2sdl[key2cec["b"]]=sdl2input[SDLK_ESCAPE];
