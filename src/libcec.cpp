@@ -47,32 +47,36 @@ const map<enum cec_user_control_code, const char *> Cec::cecUserControlCodeName 
 // We store a global handle, so we can use g_cec->ToString(..) in certain cases. This is a bit of a HACK :(
 ICECAdapter * g_cec = NULL;
 
-int cecLogMessage(void *cbParam, const cec_log_message message) {
+void cecLogMessage(void *cbParam, const cec_log_message* message) {
 	try {
-		return ((CecCallback*) cbParam)->onCecLogMessage(message);
+		((CecCallback*) cbParam)->onCecLogMessage(*message);
+		return;
 	} catch (...) {}
-	return 0;
+	return;
 }
 
-int cecKeyPress(void *cbParam, const cec_keypress key) {
+void cecKeyPress(void *cbParam, const cec_keypress* key) {
 	try {
-		return ((CecCallback*) cbParam)->onCecKeyPress(key);
+		((CecCallback*) cbParam)->onCecKeyPress(*key);
+		return;
 	} catch (...) {}
-	return 0;
+	return;
 }
 
-int cecCommand(void *cbParam, const cec_command command) {
+void cecCommand(void *cbParam, const cec_command* command) {
 	try {
-		return ((CecCallback*) cbParam)->onCecCommand(command);
+		((CecCallback*) cbParam)->onCecCommand(*command);
+		return;
 	} catch (...) {}
-	return 0;
+	return;
 }
 
-int cecConfigurationChanged(void *cbParam, const libcec_configuration configuration) {
+void cecConfigurationChanged(void *cbParam, const libcec_configuration* configuration) {
 	try {
-		return ((CecCallback*) cbParam)->onCecConfigurationChanged(configuration);
+		((CecCallback*) cbParam)->onCecConfigurationChanged(*configuration);
+		return;
 	} catch (...) {}
-	return 0;
+	return;
 }
 
 struct ICECAdapterDeleter : std::default_delete<ICECAdapter> {
@@ -117,12 +121,12 @@ ICECAdapter * Cec::CecInit(const char * name, CecCallback * callback) {
 	config.deviceTypes.Add(CEC_DEVICE_TYPE_RECORDING_DEVICE);
 	strncpy(config.strDeviceName, name, sizeof(config.strDeviceName));
 
-	callbacks.CBCecLogMessage           = &::cecLogMessage;
-	callbacks.CBCecKeyPress             = &::cecKeyPress;
-	callbacks.CBCecCommand              = &::cecCommand;
-	callbacks.CBCecConfigurationChanged = &::cecConfigurationChanged;
-	config.callbackParam                = callback;
-	config.callbacks                    = &callbacks;
+	callbacks.logMessage           = &::cecLogMessage;
+	callbacks.keyPress             = &::cecKeyPress;
+	callbacks.commandReceived      = &::cecCommand;
+	callbacks.configurationChanged = &::cecConfigurationChanged;
+	config.callbackParam           = callback;
+	config.callbacks               = &callbacks;
 
 	// LibCecInitialise is noisy, so we redirect cout to nowhere
 	RedirectStreamBuffer redirect(cout, 0);
@@ -147,8 +151,8 @@ void Cec::open() {
 	assert(cec != NULL);
 
 	// Search for adapters
-	cec_adapter devices[10];
-	uint8_t ret = cec->FindAdapters(devices, 10, NULL);
+	cec_adapter_descriptor devices[10];
+	uint8_t ret = cec->DetectAdapters(devices, 10, NULL);
 	if (ret < 0) {
 		throw std::runtime_error("Error occurred searching for adapters");
 	}
@@ -158,11 +162,11 @@ void Cec::open() {
 	}
 
 	// Just use the first found
-	if (!cec->Open(devices[0].comm)) {
+	if (!cec->Open(devices[0].strComName)) {
 		throw std::runtime_error("Failed to open adapter");
 	}
 
-	LOG4CPLUS_INFO(logger, "Opened " << devices[0].path);
+	LOG4CPLUS_INFO(logger, "Opened " << devices[0].strComPath);
 }
 
 void Cec::close() {
@@ -184,8 +188,8 @@ void Cec::makeActive() {
  * This will close any open device!
  */
 ostream & Cec::listDevices(ostream & out) {
-	cec_adapter devices[10];
-	int8_t ret = cec->FindAdapters(devices, 10, NULL);
+	cec_adapter_descriptor devices[10];
+	int8_t ret = cec->DetectAdapters(devices, 10, NULL);
 	if (ret < 0) {
 		LOG4CPLUS_ERROR(logger, "Error occurred searching for adapters");
 		return out;
@@ -196,9 +200,9 @@ ostream & Cec::listDevices(ostream & out) {
 	}
 
 	for (int8_t i = 0; i < ret; i++) {
-		out << "[" << (int) i << "] port:" << devices[i].comm << " path:" << devices[i].path << endl;
+		out << "[" << (int) i << "] port:" << devices[i].strComName << " path:" << devices[i].strComPath << endl;
 
-		if (!cec->Open(devices[i].comm)) {
+		if (!cec->Open(devices[i].strComName)) {
 			out << "\tFailed to open" << endl;
 		}
 
@@ -208,12 +212,13 @@ ostream & Cec::listDevices(ostream & out) {
 				cec_logical_address logical_addres = (cec_logical_address) j;
 
 				uint16_t physical_address = cec->GetDevicePhysicalAddress(logical_addres);
-				cec_osd_name name = cec->GetDeviceOSDName(logical_addres);
+				cec_osd_name name;
+				strncpy (name, cec->GetDeviceOSDName(logical_addres).c_str(), sizeof(name));
 				cec_vendor_id vendor = (cec_vendor_id) cec->GetDeviceVendorId(logical_addres);
 
 				out << "\t"  << cec->ToString(logical_addres)
 				    << "@0x" << hex << physical_address
-				    << " "   << name.name << " (" << cec->ToString(vendor) << ")"
+				    << " "   << name << " (" << cec->ToString(vendor) << ")"
 				    << endl;
 			}
 		}
