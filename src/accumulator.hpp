@@ -47,6 +47,9 @@ public:
     /// There are no tokens for an accumulator_type
     virtual unsigned min_tokens() const { return 0; }
     virtual unsigned max_tokens() const { return 0; }
+    
+    // Returns true if the option should only take adjacent token, not one from further command-line arguments
+    virtual bool adjacent_tokens_only() const { return true; }
 
     /// Accumulating from different sources is silly.
     virtual bool is_composing() const { return false; }
